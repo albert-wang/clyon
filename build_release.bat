@@ -1,0 +1,1 @@
+cargo +stable-i686-pc-windows-msvc build --release
