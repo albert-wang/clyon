@@ -10,4 +10,4 @@ name = "clyon"
 crate_type = ["staticlib"]
 
 [dependencies]
-lyon = "0.16"
+lyon = "0.16.2"

@@ -9,28 +9,26 @@ use std::ops::Add;
 
 #[repr(C)]
 pub struct CFillOptions {
-    tolerance: f32, 
-    fillRule: i32, 
-    orientation: i32,
+    pub tolerance: f32,
+    pub fill_rule: i32,
+    pub orientation: i32,
+
+    pub color: u32,
+    pub fill_ind: f32,
+    pub shape_ind: f32,
 }
 
 #[repr(C)]
 pub struct CStrokeOptions {
-    startCap: i32,
-    endCap: i32, 
-    join: i32, 
-    width: f32, 
-    applyWidth: i32,
-}
+    pub start_cap: i32,
+    pub end_cap: i32,
+    pub join: i32,
+    pub width: f32,
+    pub apply_width: i32,
 
-// Converts a float array in rgba format to u32 in RRGGBBAA format
-fn to_color32(c: &[f32]) -> u32 {
-    let r = (c[0] * 255.0) as u32 & 0xFF;
-    let g = (c[1] * 255.0) as u32 & 0xFF;
-    let b = (c[2] * 255.0) as u32 & 0xFF;
-    let a = (c[3] * 255.0) as u32 & 0xFF;
-
-    (r << 24) | (g << 16) | (b << 8) | a
+    pub color: u32,
+    pub fill_ind: f32,
+    pub shape_ind: f32,
 }
 
 fn tesselate_fill<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex>(p: *mut Path, copts: CFillOptions) -> *mut VertexBuffers<Vertex, IndexType> {
@@ -44,7 +42,7 @@ fn tesselate_fill<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex>(
         opts.tolerance = copts.tolerance
     }
 
-    if copts.fillRule != 0 {
+    if copts.fill_rule != 0 {
         opts.fill_rule = FillRule::NonZero
     }
 
@@ -54,15 +52,17 @@ fn tesselate_fill<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex>(
 
     let mut geometry: VertexBuffers<Vertex, IndexType> = VertexBuffers::new();
     tesselator.tessellate_path(
-        path, 
-        &opts, 
-        &mut BuffersBuilder::new(&mut geometry, |p: Point, mut fa: FillAttributes| {
-            let attrs = fa.interpolated_attributes();
+        path,
+        &opts,
+        &mut BuffersBuilder::new(&mut geometry, |p: Point, _ : FillAttributes| {
             Vertex{
                 position: p.to_array(),
-                uv: [attrs[0], attrs[1], 0.0, 0.0], 
-                color: to_color32(&attrs[2..6]),
-                custom: [attrs[6], attrs[7], attrs[8]],
+                original_position: [p.x, p.y],
+                normal: [0.0, 0.0],
+                color: copts.color,
+                primitive_type: 1.0,
+                fill_ind: copts.fill_ind,
+                shape_ind: copts.shape_ind,
             }
         })
     ).unwrap();
@@ -72,7 +72,7 @@ fn tesselate_fill<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex>(
 
 fn cap_from_integer(i: i32) -> LineCap {
     match i {
-        0 => LineCap::Butt, 
+        0 => LineCap::Butt,
         1 => LineCap::Round,
         2 => LineCap::Square,
         _ => LineCap::Butt,
@@ -81,9 +81,9 @@ fn cap_from_integer(i: i32) -> LineCap {
 
 fn join_from_integer(i: i32) -> LineJoin {
     match i {
-        0 => LineJoin::Miter, 
-        1 => LineJoin::MiterClip, 
-        2 => LineJoin::Bevel, 
+        0 => LineJoin::Miter,
+        1 => LineJoin::MiterClip,
+        2 => LineJoin::Bevel,
         3 => LineJoin::Round,
         _ => LineJoin::Miter
     }
@@ -98,25 +98,27 @@ fn tesselate_stroke<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex
     let mut tesselator = StrokeTessellator::new();
 
     let mut opts = StrokeOptions::default();
-    opts.start_cap = cap_from_integer(copts.startCap);
-    opts.end_cap = cap_from_integer(copts.endCap);
+    opts.start_cap = cap_from_integer(copts.start_cap);
+    opts.end_cap = cap_from_integer(copts.end_cap);
     opts.line_join = join_from_integer(copts.join);
     opts.line_width = copts.width;
-    opts.apply_line_width = copts.applyWidth != 0;
+    opts.apply_line_width = copts.apply_width != 0;
 
     let mut geometry: VertexBuffers<Vertex, IndexType> = VertexBuffers::new();
     tesselator.tessellate_path(
-        path, 
-        &StrokeOptions::default(), 
-        &mut BuffersBuilder::new(&mut geometry, |p: Point, mut sa: StrokeAttributes| {
+        path,
+        &StrokeOptions::default(),
+        &mut BuffersBuilder::new(&mut geometry, |p: Point, sa: StrokeAttributes| {
             let normal = { sa.normal() };
-            let attrs = sa.interpolated_attributes();
 
             Vertex{
                 position: p.to_array(),
-                uv: [attrs[0], attrs[1], normal.x, normal.y], 
-                color: to_color32(&attrs[2..6]),
-                custom: [attrs[6], attrs[7], attrs[8]],
+                original_position: [p.x, p.y],
+                normal: [normal.x, normal.y],
+                color: copts.color,
+                primitive_type: 2.0,
+                fill_ind: copts.fill_ind,
+                shape_ind: copts.shape_ind,
             }
         })
     ).unwrap();
@@ -124,31 +126,31 @@ fn tesselate_stroke<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex
     Box::into_raw(Box::new(geometry))
 }
 #[no_mangle]
-pub extern "C" fn TessellateFill16(p: *mut Path, copts: CFillOptions) -> *mut VertexBuffers<Vertex, u16> {
+pub extern "C" fn LyonTessellateFill16(p: *mut Path, copts: CFillOptions) -> *mut VertexBuffers<Vertex, u16> {
     tesselate_fill(p, copts)
 }
 
 #[no_mangle]
-pub extern "C" fn TessellateFill32(p: *mut Path, copts: CFillOptions) -> *mut VertexBuffers<Vertex, u32> {
+pub extern "C" fn LyonTessellateFill32(p: *mut Path, copts: CFillOptions) -> *mut VertexBuffers<Vertex, u32> {
     tesselate_fill(p, copts)
 }
 
 #[no_mangle]
-pub extern "C" fn TessellateStroke16(p: *mut Path, copts: CStrokeOptions) -> *mut VertexBuffers<Vertex, u16> {
+pub extern "C" fn LyonTessellateStroke16(p: *mut Path, copts: CStrokeOptions) -> *mut VertexBuffers<Vertex, u16> {
     tesselate_stroke(p, copts)
 }
 
 #[no_mangle]
-pub extern "C" fn TessellateStroke32(p: *mut Path, copts: CStrokeOptions) -> *mut VertexBuffers<Vertex, u32> {
+pub extern "C" fn LyonTessellateStroke32(p: *mut Path, copts: CStrokeOptions) -> *mut VertexBuffers<Vertex, u32> {
     tesselate_stroke(p, copts)
 }
 
 #[no_mangle]
-pub extern "C" fn FreeGeometry16(p: *mut VertexBuffers<Vertex, u16>) {
+pub extern "C" fn LyonFreeGeometry16(p: *mut VertexBuffers<Vertex, u16>) {
     unsafe { Box::from_raw(p) };
 }
 
 #[no_mangle]
-pub extern "C" fn FreeGeometry32(p: *mut VertexBuffers<Vertex, u32>) {
+pub extern "C" fn LyonFreeGeometry32(p: *mut VertexBuffers<Vertex, u32>) {
     unsafe { Box::from_raw(p) };
 }
