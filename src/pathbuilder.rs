@@ -71,7 +71,14 @@ pub extern "C" fn LyonPathBuilder_Arc(
         x_rotation: math::Angle::radians(x_rotation)
     };
 
+    let mut first = true;
     arc.for_each_cubic_bezier(&mut |seg: &CubicBezierSegment<f32> | {
+        if first
+        {
+            builder.move_to(seg.from, &input_vertex_to_attrs(center));
+            first = false;
+        }
+
         builder.cubic_bezier_to(seg.ctrl1, seg.ctrl2, seg.to, &input_vertex_to_attrs(center));
     })
 }

@@ -29,6 +29,8 @@ pub struct CStrokeOptions {
     pub color: u32,
     pub fill_ind: f32,
     pub shape_ind: f32,
+
+    pub tolerance: f32,
 }
 
 fn tesselate_fill<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex>(p: *mut Path, copts: CFillOptions) -> *mut VertexBuffers<Vertex, IndexType> {
@@ -103,11 +105,12 @@ fn tesselate_stroke<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex
     opts.line_join = join_from_integer(copts.join);
     opts.line_width = copts.width;
     opts.apply_line_width = copts.apply_width != 0;
+    opts.tolerance = copts.tolerance;
 
     let mut geometry: VertexBuffers<Vertex, IndexType> = VertexBuffers::new();
     tesselator.tessellate_path(
         path,
-        &StrokeOptions::default(),
+        &opts,
         &mut BuffersBuilder::new(&mut geometry, |p: Point, sa: StrokeAttributes| {
             let normal = { sa.normal() };
 
