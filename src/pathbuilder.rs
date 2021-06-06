@@ -1,6 +1,6 @@
 extern crate lyon;
 
-use lyon::path::BuilderWithAttributes;
+use lyon_path::path::BuilderWithAttributes;
 use lyon::path::math::{ point, vector };
 use lyon::path::Path;
 use lyon::geom::*;
@@ -12,10 +12,23 @@ pub struct InputVertex
     pub position: [f32; 2],
 }
 
+pub struct Builder
+{
+    builder: BuilderWithAttributes,
+    current_position: lyon::math::Point,
+    starting_position: lyon::math::Point,
+}
+
 // Path stuff
 #[no_mangle]
-pub extern "C" fn LyonCreatePathBuilder() -> *mut BuilderWithAttributes {
-    let builder = Path::builder_with_attributes(2);
+pub extern "C" fn LyonCreatePathBuilder() -> *mut Builder {
+    let bwa = Path::builder_with_attributes(2);
+    let builder = Builder{
+        builder: bwa, 
+        current_position: point(0.0, 0.0),
+        starting_position: point(0.0, 0.0),
+    };
+
     Box::into_raw(Box::new(builder))
 }
 
@@ -24,36 +37,57 @@ fn input_vertex_to_attrs(_: InputVertex) -> [f32; 2] {
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_MoveTo(p: *mut BuilderWithAttributes, v: InputVertex) {
+pub extern "C" fn LyonPathBuilder_Begin(p: *mut Builder, v: InputVertex) {
     assert!(!p.is_null());
 
     let builder = unsafe { &mut (*p) };
-    builder.move_to(point(v.position[0], v.position[1]), &input_vertex_to_attrs(v));
+    let c = point(v.position[0], v.position[1]);
+
+    builder.builder.begin(c, &input_vertex_to_attrs(v));
+    builder.current_position = c;
+    builder.starting_position = c;
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_LineTo(p: *mut BuilderWithAttributes, v: InputVertex) {
+pub extern "C" fn LyonPathBuilder_End(p: *mut Builder, c: bool) {
     assert!(!p.is_null());
 
     let builder = unsafe { &mut (*p) };
-    builder.line_to(point(v.position[0], v.position[1]), &input_vertex_to_attrs(v));
+    builder.builder.end(c);
+    if c {
+        builder.current_position = builder.starting_position;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_LineTo(p: *mut Builder, v: InputVertex) {
+    assert!(!p.is_null());
+
+    let builder = unsafe { &mut (*p) };
+    let c = point(v.position[0], v.position[1]);
+
+    builder.builder.line_to(c, &input_vertex_to_attrs(v));
+    builder.current_position = c;
 }
 
 #[no_mangle]
 pub extern "C" fn LyonPathBuilder_QuadraticBeizerTo(
-    p: *mut BuilderWithAttributes,
+    p: *mut Builder,
     cx: f32, cy: f32,
     v: InputVertex
 ) {
     assert!(!p.is_null());
 
     let builder = unsafe { &mut (*p) };
-    builder.quadratic_bezier_to(point(cx,cy), point(v.position[0],v.position[1]), &input_vertex_to_attrs(v));
+    let c = point(v.position[0], v.position[1]);
+    
+    builder.builder.quadratic_bezier_to(point(cx,cy), c, &input_vertex_to_attrs(v));
+    builder.current_position = c;
 }
 
 #[no_mangle]
 pub extern "C" fn LyonPathBuilder_Arc(
-    p: *mut BuilderWithAttributes,
+    p: *mut Builder,
     center: InputVertex,
     radius_x: f32, radius_y: f32,
     start_angle: f32,
@@ -66,26 +100,27 @@ pub extern "C" fn LyonPathBuilder_Arc(
     let arc = Arc {
         center: point(center.position[0], center.position[1]),
         radii: vector(radius_x, radius_y),
-        start_angle: math::Angle::radians(start_angle),
-        sweep_angle: math::Angle::radians(sweep_angle),
-        x_rotation: math::Angle::radians(x_rotation)
+        start_angle: Angle::radians(start_angle),
+        sweep_angle: Angle::radians(sweep_angle),
+        x_rotation: Angle::radians(x_rotation)
     };
 
     let mut first = true;
     arc.for_each_cubic_bezier(&mut |seg: &CubicBezierSegment<f32> | {
         if first
         {
-            builder.move_to(seg.from, &input_vertex_to_attrs(center));
+            builder.builder.line_to(seg.from, &input_vertex_to_attrs(center));
             first = false;
         }
 
-        builder.cubic_bezier_to(seg.ctrl1, seg.ctrl2, seg.to, &input_vertex_to_attrs(center));
+        builder.builder.cubic_bezier_to(seg.ctrl1, seg.ctrl2, seg.to, &input_vertex_to_attrs(center));
+        builder.current_position = seg.to;
     })
 }
 
 #[no_mangle]
 pub extern "C" fn LyonPathBuilder_ArcTo(
-    p: *mut BuilderWithAttributes,
+    p: *mut Builder,
     to: InputVertex,
     radius_x: f32, radius_y: f32,
     rotation: f32,
@@ -108,22 +143,26 @@ pub extern "C" fn LyonPathBuilder_ArcTo(
         }
     };
 
+    let t = point(to.position[0], to.position[1]);
+
     let arc = SvgArc {
-        from: builder.current_position(),
-        to: point(to.position[0], to.position[1]),
+        from: builder.current_position,
+        to: t,
         radii: vector(radius_x, radius_y),
-        x_rotation: math::Angle::radians(rotation),
+        x_rotation: Angle::radians(rotation),
         flags: flags
     };
 
     arc.for_each_cubic_bezier(&mut |seg: &CubicBezierSegment<f32>| {
-        builder.cubic_bezier_to(seg.ctrl1, seg.ctrl2, seg.to, &input_vertex_to_attrs(to));
+        builder.builder.cubic_bezier_to(seg.ctrl1, seg.ctrl2, seg.to, &input_vertex_to_attrs(to));
     });
+
+    builder.current_position = t;
 }
 
 #[no_mangle]
 pub extern "C" fn LyonPathBuilder_CubicBeizerTo(
-    p: *mut BuilderWithAttributes,
+    p: *mut Builder,
     cx: f32, cy: f32,
     c2x: f32, c2y: f32,
     v: InputVertex
@@ -131,19 +170,21 @@ pub extern "C" fn LyonPathBuilder_CubicBeizerTo(
     assert!(!p.is_null());
 
     let builder = unsafe { &mut (*p) };
-    builder.cubic_bezier_to(point(cx,cy), point(c2x, c2y), point(v.position[0],v.position[1]), &input_vertex_to_attrs(v));
+    let t = point(v.position[0], v.position[1]);
+
+    builder.builder.cubic_bezier_to(point(cx,cy), point(c2x, c2y), t, &input_vertex_to_attrs(v));
+    builder.current_position = t;
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_Build(p: *mut BuilderWithAttributes) -> *mut Path {
+pub extern "C" fn LyonPathBuilder_Build(p: *mut Builder) -> *mut Path {
     assert!(!p.is_null());
 
     let builder = unsafe { Box::from_raw(p) };
-    let path = builder.build();
+    let path = builder.builder.build();
 
     Box::into_raw(Box::new(path))
 }
-
 
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]

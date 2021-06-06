@@ -3,7 +3,6 @@ extern crate lyon;
 use crate::vertex::Vertex;
 
 use lyon::path::Path;
-use lyon::path::math::Point;
 use lyon::tessellation::*;
 use std::ops::Add;
 
@@ -16,6 +15,21 @@ pub struct CFillOptions {
     pub color: u32,
     pub fill_ind: f32,
     pub shape_ind: f32,
+}
+
+impl FillVertexConstructor<Vertex> for CFillOptions {
+    fn new_vertex(&mut self, vertex: FillVertex) -> Vertex {
+        let p = vertex.position();
+        Vertex{
+            position: p.to_array(),
+            original_position: [p.x, p.y],
+            normal: [0.0, 0.0],
+            color: self.color,
+            primitive_type: 1.0,
+            fill_ind: self.fill_ind,
+            shape_ind: self.shape_ind,
+        }
+    }
 }
 
 #[repr(C)]
@@ -32,6 +46,22 @@ pub struct CStrokeOptions {
 
     pub tolerance: f32,
 }
+
+impl StrokeVertexConstructor<Vertex> for CStrokeOptions {
+    fn new_vertex(&mut self, vertex: StrokeVertex) -> Vertex {
+        let p = vertex.position();
+        Vertex{
+            position: p.to_array(),
+            original_position: [p.x, p.y],
+            normal: [0.0, 0.0],
+            color: self.color,
+            primitive_type: 1.0,
+            fill_ind: self.fill_ind,
+            shape_ind: self.shape_ind,
+        }
+    }
+}
+
 
 fn tesselate_fill<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex>(p: *mut Path, copts: CFillOptions) -> *mut VertexBuffers<Vertex, IndexType> {
     assert!(!p.is_null());
@@ -56,17 +86,7 @@ fn tesselate_fill<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex>(
     tesselator.tessellate_path(
         path,
         &opts,
-        &mut BuffersBuilder::new(&mut geometry, |p: Point, _ : FillAttributes| {
-            Vertex{
-                position: p.to_array(),
-                original_position: [p.x, p.y],
-                normal: [0.0, 0.0],
-                color: copts.color,
-                primitive_type: 1.0,
-                fill_ind: copts.fill_ind,
-                shape_ind: copts.shape_ind,
-            }
-        })
+        &mut BuffersBuilder::new(&mut geometry, copts)
     ).unwrap();
 
     Box::into_raw(Box::new(geometry))
@@ -104,26 +124,13 @@ fn tesselate_stroke<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex
     opts.end_cap = cap_from_integer(copts.end_cap);
     opts.line_join = join_from_integer(copts.join);
     opts.line_width = copts.width;
-    opts.apply_line_width = copts.apply_width != 0;
     opts.tolerance = copts.tolerance;
 
     let mut geometry: VertexBuffers<Vertex, IndexType> = VertexBuffers::new();
     tesselator.tessellate_path(
         path,
         &opts,
-        &mut BuffersBuilder::new(&mut geometry, |p: Point, sa: StrokeAttributes| {
-            let normal = { sa.normal() };
-
-            Vertex{
-                position: p.to_array(),
-                original_position: [p.x, p.y],
-                normal: [normal.x, normal.y],
-                color: copts.color,
-                primitive_type: 2.0,
-                fill_ind: copts.fill_ind,
-                shape_ind: copts.shape_ind,
-            }
-        })
+        &mut BuffersBuilder::new(&mut geometry, copts)
     ).unwrap();
 
     Box::into_raw(Box::new(geometry))
