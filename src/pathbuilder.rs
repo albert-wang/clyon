@@ -134,6 +134,18 @@ pub extern "C" fn LyonPathBuilder_CubicBeizerTo(
     builder.cubic_bezier_to(point(cx,cy), point(c2x, c2y), point(v.position[0],v.position[1]), &input_vertex_to_attrs(v));
 }
 
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_End(p: *mut BuilderWithAttributes, close: bool) {
+    assert!(!p.is_null());
+
+    let builder = unsafe { &mut (*p) };
+    
+    if close {
+        builder.close();
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn LyonPathBuilder_Build(p: *mut BuilderWithAttributes) -> *mut Path {
     assert!(!p.is_null());
