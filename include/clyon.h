@@ -1,5 +1,7 @@
 #include <stdint.h>
-
+#pragma once
+#ifndef CYLON_INCLUDE
+#define CYLON_INCLUDE
 extern "C"
 {
 	struct LyonPathBuilder;
@@ -86,6 +88,8 @@ extern "C"
 		uint32_t color;
 		float fillIndex;
 		float shapeIndex;
+
+		float tolerance;
 	};
 
 	inline LyonInputVertex LyonCreatePoint(float x, float y)
@@ -158,5 +162,5 @@ extern "C"
 	uint32_t				LyonGeometry32_VerticesLength	(LyonGeometry32*);
 	uint32_t				LyonGeometry32_IndicesLength	(LyonGeometry32*);
 	void					LyonFreeGeometry32				(LyonGeometry32*);
-
 }
+#endif
