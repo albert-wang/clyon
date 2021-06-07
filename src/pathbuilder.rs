@@ -17,6 +17,7 @@ pub struct Builder
     builder: BuilderWithAttributes,
     current_position: lyon::math::Point,
     starting_position: lyon::math::Point,
+    begun: bool,
 }
 
 // Path stuff
@@ -27,6 +28,7 @@ pub extern "C" fn LyonCreatePathBuilder() -> *mut Builder {
         builder: bwa, 
         current_position: point(0.0, 0.0),
         starting_position: point(0.0, 0.0),
+        begun: false,
     };
 
     Box::into_raw(Box::new(builder))
@@ -46,6 +48,7 @@ pub extern "C" fn LyonPathBuilder_Begin(p: *mut Builder, v: InputVertex) {
     builder.builder.begin(c, &input_vertex_to_attrs(v));
     builder.current_position = c;
     builder.starting_position = c;
+    builder.begun = true;
 }
 
 #[no_mangle]
@@ -53,10 +56,29 @@ pub extern "C" fn LyonPathBuilder_End(p: *mut Builder, c: bool) {
     assert!(!p.is_null());
 
     let builder = unsafe { &mut (*p) };
+    assert!(builder.begun);
     builder.builder.end(c);
+    builder.begun = false;
+
     if c {
         builder.current_position = builder.starting_position;
     }
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_MoveTo(p: *mut Builder, v: InputVertex) {
+    assert!(!p.is_null());
+
+    let builder = unsafe { &mut (*p) };
+    let c = point(v.position[0], v.position[1]);
+
+    if builder.begun {
+        builder.builder.end(false);
+    }
+
+    builder.builder.begin(c, &input_vertex_to_attrs(v));
+    builder.current_position = c;
+    builder.starting_position = c;
 }
 
 #[no_mangle]

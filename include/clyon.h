@@ -136,6 +136,7 @@ extern "C"
 	void                LyonPathBuilder_Begin               (LyonPathBuilder*, LyonInputVertex);
 	void                LyonPathBuilder_End                 (LyonPathBuilder*, bool close);
 
+	void				LyonPathBuilder_MoveTo				(LyonPathBuilder*, LyonInputVertex);
 	void				LyonPathBuilder_LineTo				(LyonPathBuilder*, LyonInputVertex);
 	void				LyonPathBuilder_QuadraticBeizerTo	(LyonPathBuilder*, float ctrlX, float ctrlY, LyonInputVertex);
 	void				LyonPathBuilder_CubicBeizerTo		(LyonPathBuilder*, float ctrlX, float ctrlY, float ctrl2X, float ctrl2Y, LyonInputVertex);
