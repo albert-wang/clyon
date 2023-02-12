@@ -83,7 +83,6 @@ extern "C"
 		int32_t endCap;
 		int32_t join;
 		float width;
-		int32_t applyWidth;
 
 		uint32_t color;
 		float fillIndex;

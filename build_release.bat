@@ -1,1 +1,2 @@
-cargo +stable-i686-pc-windows-msvc build --release
+cargo build --release
+cp target/release/cylon.lib ../../Build/cylon.lib
