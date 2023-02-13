@@ -35,9 +35,9 @@ extern "C"
 		float normal[2];
 		uint32_t color;
 
-		float primitiveType;
-		float fillIndex;
-		float shapeIndex;
+		uint32_t primitiveType;
+		uint32_t fillIndex;
+		uint32_t shapeIndex;
 	};
 
 	struct LyonAABB
@@ -80,8 +80,8 @@ extern "C"
 		int32_t orientation;
 
 		uint32_t color;
-		float fillIndex;
-		float shapeIndex;
+		int32_t fillIndex;
+		int32_t shapeIndex;
 	};
 
 	struct LyonStrokeProperties
@@ -92,8 +92,8 @@ extern "C"
 		float width;
 
 		uint32_t color;
-		float fillIndex;
-		float shapeIndex;
+		int32_t fillIndex;
+		int32_t shapeIndex;
 		
 		float tolerance;
 	};
@@ -114,12 +114,12 @@ extern "C"
 		return props;
 	}
 
-	inline LyonFillProperties LyonCreateFillPropertiesWithColorAndIndices(uint32_t color, float fill, float shape)
+	inline LyonFillProperties LyonCreateFillPropertiesWithColorAndIndices(uint32_t color, uint32_t fillIndex, uint32_t shapeIndex)
 	{
 		LyonFillProperties props = { 0 };
 		props.color = color;
-		props.fillIndex = fill;
-		props.shapeIndex = shape;
+		props.fillIndex = fillIndex;
+		props.shapeIndex = shapeIndex;
 		return props;
 	}
 
@@ -129,12 +129,12 @@ extern "C"
 		return props;
 	}
 
-	inline LyonStrokeProperties	LyonCreateStrokePropertiesWithColorAndIndices(uint32_t color, float fill, float shape)
+	inline LyonStrokeProperties	LyonCreateStrokePropertiesWithColorAndIndices(uint32_t color, uint32_t fillIndex, uint32_t shapeIndex)
 	{
 		LyonStrokeProperties props = { 0 };
 		props.color = color;
-		props.fillIndex = fill;
-		props.shapeIndex = shape;
+		props.fillIndex = fillIndex;
+		props.shapeIndex = shapeIndex;
 		return props;
 	}
 

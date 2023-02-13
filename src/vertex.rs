@@ -1,3 +1,6 @@
+pub const PRIMITIVE_TYPE_FILLED: u32 = 1;
+pub const PRIMITIVE_TYPE_STROKED: u32 = 2;
+
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct Vertex {
@@ -7,11 +10,11 @@ pub struct Vertex {
     pub color: u32,
 
     // 0 - text, 1 - filled shape, 2 - stroked line,
-    pub primitive_type: f32,
+    pub primitive_type: u32,
 
     // Index into a fill array
-    pub fill_ind: f32,
+    pub fill_ind: i32,
 
     // Index of the shape
-    pub shape_ind: f32,
+    pub shape_ind: i32,
 }

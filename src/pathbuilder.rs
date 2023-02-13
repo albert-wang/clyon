@@ -274,10 +274,7 @@ pub extern "C" fn LyonPathBuilder_GetCurrentPosition(p: *mut InternalBuilder) ->
     let builder = unsafe { &mut (*p) };
 
     let p = builder.current_position();
-    return LyonPoint {
-        x: p.x, 
-        y: p.y
-    };
+    return LyonPoint { x: p.x, y: p.y };
 }
 
 #[no_mangle]
@@ -286,17 +283,32 @@ pub extern "C" fn LyonPathBuilder_AddRect(p: *mut InternalBuilder, min: LyonPoin
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_AddCircle(p: *mut InternalBuilder, center: LyonPoint, radius: f32) {
+pub extern "C" fn LyonPathBuilder_AddCircle(
+    p: *mut InternalBuilder,
+    center: LyonPoint,
+    radius: f32,
+) {
     additional_geometry::add_circle(p, center, radius);
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_AddEllipse(p: *mut InternalBuilder, center: LyonPoint, r_x: f32, r_y: f32, x_rotation: f32) {
+pub extern "C" fn LyonPathBuilder_AddEllipse(
+    p: *mut InternalBuilder,
+    center: LyonPoint,
+    r_x: f32,
+    r_y: f32,
+    x_rotation: f32,
+) {
     additional_geometry::add_ellipse(p, center, r_x, r_y, x_rotation);
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_AddRoundedRect(p: *mut InternalBuilder,  min: LyonPoint, max: LyonPoint, border_radius: f32) {
+pub extern "C" fn LyonPathBuilder_AddRoundedRect(
+    p: *mut InternalBuilder,
+    min: LyonPoint,
+    max: LyonPoint,
+    border_radius: f32,
+) {
     additional_geometry::add_rounded_rectangle(p, min, max, border_radius);
 }
 

@@ -1,4 +1,4 @@
-use crate::vertex::Vertex;
+use crate::vertex::{Vertex, PRIMITIVE_TYPE_FILLED, PRIMITIVE_TYPE_STROKED};
 
 use lyon::path::Path;
 use lyon::tessellation::*;
@@ -11,8 +11,8 @@ pub struct CFillOptions {
     pub orientation: i32,
 
     pub color: u32,
-    pub fill_ind: f32,
-    pub shape_ind: f32,
+    pub fill_ind: i32,
+    pub shape_ind: i32,
 }
 
 #[repr(C)]
@@ -23,8 +23,8 @@ pub struct CStrokeOptions {
     pub width: f32,
 
     pub color: u32,
-    pub fill_ind: f32,
-    pub shape_ind: f32,
+    pub fill_ind: i32,
+    pub shape_ind: i32,
 
     pub tolerance: f32,
 }
@@ -64,7 +64,7 @@ fn tesselate_fill<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex>(
                     original_position: [p.x, p.y],
                     normal: [0.0, 0.0],
                     color: copts.color,
-                    primitive_type: 1.0,
+                    primitive_type: PRIMITIVE_TYPE_FILLED,
                     fill_ind: copts.fill_ind,
                     shape_ind: copts.shape_ind,
                 }
@@ -126,7 +126,7 @@ fn tesselate_stroke<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex
                     original_position: [p.x, p.y],
                     normal: [normal.x, normal.y],
                     color: copts.color,
-                    primitive_type: 2.0,
+                    primitive_type: PRIMITIVE_TYPE_STROKED,
                     fill_ind: copts.fill_ind,
                     shape_ind: copts.shape_ind,
                 }

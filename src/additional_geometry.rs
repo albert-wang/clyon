@@ -28,7 +28,13 @@ pub fn add_rectangle(p: *mut InternalBuilder, min: LyonPoint, max: LyonPoint) {
     builder.add_polygon(rect);
 }
 
-pub fn add_ellipse(p: *mut InternalBuilder, center: LyonPoint, r_x: f32, r_y: f32, x_rotation: f32) {
+pub fn add_ellipse(
+    p: *mut InternalBuilder,
+    center: LyonPoint,
+    r_x: f32,
+    r_y: f32,
+    x_rotation: f32,
+) {
     let arc = Arc {
         center: center.into(),
         radii: vector(r_x, r_y),
