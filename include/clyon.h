@@ -9,9 +9,16 @@ extern "C"
 	struct LyonGeometry16;
 	struct LyonGeometry32;
 
-	struct LyonInputVertex
+	struct LyonVector
 	{
-		float position[2];
+		float x;
+		float y;
+	};
+
+	struct LyonPoint
+	{
+		float x;
+		float y;
 	};
 
 	enum LyonPrimitiveType
@@ -91,13 +98,14 @@ extern "C"
 		float tolerance;
 	};
 
-	inline LyonInputVertex LyonCreatePoint(float x, float y)
+	inline LyonPoint LyonCreatePoint(float x, float y)
 	{
-		LyonInputVertex v = { 0 };
-		v.position[0] = x;
-		v.position[1] = y;
+		return LyonPoint{ x, y };
+	}
 
-		return v;
+	inline LyonVector LyonCreateVector(float x, float y)
+	{
+		return LyonVector{ x, y };
 	}
 
 	inline LyonFillProperties LyonCreateFillProperties()
@@ -131,14 +139,55 @@ extern "C"
 	}
 
 	// LyonPathBuilder functions
+
+	/// Creates an empty path builder.
 	LyonPathBuilder*	LyonCreatePathBuilder				();
-	void				LyonPathBuilder_MoveTo				(LyonPathBuilder*, LyonInputVertex);
-	void				LyonPathBuilder_LineTo				(LyonPathBuilder*, LyonInputVertex);
-	void				LyonPathBuilder_QuadraticBeizerTo	(LyonPathBuilder*, float ctrlX, float ctrlY, LyonInputVertex);
-	void				LyonPathBuilder_CubicBeizerTo		(LyonPathBuilder*, float ctrlX, float ctrlY, float ctrl2X, float ctrl2Y, LyonInputVertex);
-	void				LyonPathBuilder_Arc					(LyonPathBuilder*, LyonInputVertex center, float rX, float rY, float startRadians, float sweepRadians, float xRotation);
-	void				LyonPathBuilder_ArcTo				(LyonPathBuilder*, LyonInputVertex to, float rX, float rY, float xRotation, int32_t large, int32_t sweep);
-	void                LyonPathBuilder_End                 (LyonPathBuilder*, bool close);
+
+	/// Starts a new sub-path at the given position. 
+	/// Roughly correlates to the SVG command "M".
+	/// 
+	/// This command creates a new initial and current point, as if the 
+	/// pen was lifted and moved to a new location. If an existing sub-path was
+	/// in progress, it is ended without being closed.
+	void				LyonPathBuilder_MoveTo				(LyonPathBuilder*, LyonPoint);
+
+	/// Closes the sub-path by connecting it to its starting point
+	/// with a straight line.
+	/// Roughly correlates to the SVG command "Z"
+	///
+	/// This ends the sub-path.
+	void                LyonPathBuilder_Close 				(LyonPathBuilder*);	
+	void				LyonPathBuilder_LineTo				(LyonPathBuilder*, LyonPoint);
+	void				LyonPathBuilder_QuadraticBeizerTo	(LyonPathBuilder*, LyonPoint ctrl, LyonPoint ending);
+	void				LyonPathBuilder_SmoothQuadraticBeizerTo(LyonPathBuilder*, LyonPoint ending);
+	void				LyonPathBuilder_CubicBeizerTo		(LyonPathBuilder*, LyonPoint ctrl1, LyonPoint ctrl2, LyonPoint end);
+	void				LyonPathBuilder_SmoothCubicBeizerTo (LyonPathBuilder*, LyonPoint ctrl2, LyonPoint end);
+	void				LyonPathBuilder_Arc					(LyonPathBuilder*, LyonPoint center, float rX, float rY, float sweepRadians, float xRotation);
+	void				LyonPathBuilder_ArcTo				(LyonPathBuilder*, LyonPoint to, float rX, float rY, float xRotation, int32_t large, int32_t sweep);
+	void				LyonPathBuilder_HorizontalLineTo    (LyonPathBuilder*, float x);
+	void				LyonPathBuilder_VerticalLineTo    	(LyonPathBuilder*, float y);
+
+
+	void 				LyonPathBuilder_RelativeMoveTo      (LyonPathBuilder*, LyonVector);
+	void 				LyonPathBuilder_RelativeLineTo      (LyonPathBuilder*, LyonVector);
+	void				LyonPathBuilder_RelativeQuadraticBeizerTo		(LyonPathBuilder*, LyonVector ctrl, LyonVector end);
+	void				LyonPathBuilder_RelativeSmoothQuadraticBeizerTo	(LyonPathBuilder*, LyonVector ending);
+	void				LyonPathBuilder_RelativeCubicBeizerTo       	(LyonPathBuilder*, LyonVector ctrl, LyonVector ctrl2, LyonVector end);
+	void				LyonPathBuilder_RelativeSmoothCubicBeizerTo 	(LyonPathBuilder*, LyonVector ctrl2, LyonVector end);
+	void				LyonPathBuilder_RelativeArcTo		(LyonPathBuilder*, LyonPoint to, float rX, float rY, float xRotation, int32_t large, int32_t sweep);
+
+	void				LyonPathBuilder_Reserve				(LyonPathBuilder*, uint64_t Endpoints, uint64_t ControlPoints);
+
+	LyonPoint			LyonPathBuilder_GetCurrentPosition  		(LyonPathBuilder*);
+
+	// These do not have a relative variant.
+	void 				LyonPathBuilder_AddRect(LyonPathBuilder*, LyonPoint min, LyonPoint max);
+	void 				LyonPathBuilder_AddCircle(LyonPathBuilder*, LyonPoint center, float radius);
+	void 				LyonPathBuilder_AddRoundedRect(LyonPathBuilder*, LyonPoint min, LyonPoint max, float radius);
+	void				LyonPathBuilder_AddEllipse(LyonPathBuilder*, LyonPoint center, float rX, float rY, float xRotation);
+
+	// This function 'consumes' the PathBuilder, and frees it.
+	// Any additional access to the LyonPathBuilder after this function is invalid.
 	LyonPath*			LyonPathBuilder_Build				(LyonPathBuilder*);
 
 	// LyonPath functions
@@ -161,5 +210,6 @@ extern "C"
 	uint32_t				LyonGeometry32_IndicesLength	(LyonGeometry32*);
 	void					LyonFreeGeometry32				(LyonGeometry32*);
 
+	uint32_t				LyonVersion();
 }
 #endif

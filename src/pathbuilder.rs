@@ -1,96 +1,109 @@
-extern crate lyon;
-
-use lyon::path::builder::{SvgPathBuilder, WithSvg};
-use lyon::path::math::{ point, vector, Angle };
-use lyon::path::Path;
-use lyon::path::path::BuilderImpl;
-use lyon::path::builder::Flattened;
 use lyon::geom::*;
+use lyon::path::builder::SvgPathBuilder;
+use lyon::path::math::{vector, Angle};
+use lyon::path::Path;
 
-#[derive(Copy, Clone, Debug)]
-#[repr(C)]
-pub struct InputVertex
-{
-    pub position: [f32; 2],
-}
-
-type ExposedFlatBuilder = WithSvg<Flattened<BuilderImpl>>;
+use crate::additional_geometry;
+use crate::types::{InternalBuilder, LyonPoint, LyonVector};
 
 // Path stuff
 #[no_mangle]
-pub extern "C" fn LyonCreatePathBuilder() -> *mut ExposedFlatBuilder {
-    let builder = Path::builder().flattened(0.01);
+pub extern "C" fn LyonCreatePathBuilder() -> *mut InternalBuilder {
+    let builder = Path::builder();
     let svg = builder.with_svg();
     Box::into_raw(Box::new(svg))
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_MoveTo(p: *mut ExposedFlatBuilder, v: InputVertex) {
+pub extern "C" fn LyonPathBuilder_MoveTo(p: *mut InternalBuilder, v: LyonPoint) {
     assert!(!p.is_null());
 
     let builder = unsafe { &mut (*p) };
-    builder.move_to(point(v.position[0], v.position[1]));
+    builder.move_to(v.into());
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_LineTo(p: *mut ExposedFlatBuilder, v: InputVertex) {
+pub extern "C" fn LyonPathBuilder_LineTo(p: *mut InternalBuilder, v: LyonPoint) {
     assert!(!p.is_null());
 
     let builder = unsafe { &mut (*p) };
-    builder.line_to(point(v.position[0], v.position[1]));
+    builder.line_to(v.into());
 }
 
 #[no_mangle]
 pub extern "C" fn LyonPathBuilder_QuadraticBeizerTo(
-    p: *mut ExposedFlatBuilder,
-    cx: f32, cy: f32,
-    v: InputVertex
+    p: *mut InternalBuilder,
+    c: LyonPoint,
+    v: LyonPoint,
 ) {
     assert!(!p.is_null());
 
     let builder = unsafe { &mut (*p) };
-    builder.quadratic_bezier_to(point(cx,cy), point(v.position[0],v.position[1]));
+    builder.quadratic_bezier_to(c.into(), v.into());
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_SmoothQuadraticBeizerTo(p: *mut InternalBuilder, v: LyonPoint) {
+    assert!(!p.is_null());
+
+    let builder = unsafe { &mut (*p) };
+    builder.smooth_quadratic_bezier_to(v.into());
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_CubicBeizerTo(
+    p: *mut InternalBuilder,
+    c: LyonPoint,
+    c2: LyonPoint,
+    v: LyonPoint,
+) {
+    assert!(!p.is_null());
+
+    let builder = unsafe { &mut (*p) };
+    builder.cubic_bezier_to(c.into(), c2.into(), v.into());
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_SmoothCubicBeizerTo(
+    p: *mut InternalBuilder,
+    c2: LyonPoint,
+    v: LyonPoint,
+) {
+    assert!(!p.is_null());
+    let builder = unsafe { &mut (*p) };
+
+    builder.smooth_cubic_bezier_to(c2.into(), v.into());
 }
 
 #[no_mangle]
 pub extern "C" fn LyonPathBuilder_Arc(
-    p: *mut ExposedFlatBuilder,
-    center: InputVertex,
-    radius_x: f32, radius_y: f32,
-    start_angle: f32,
+    p: *mut InternalBuilder,
+    center: LyonPoint,
+    radius_x: f32,
+    radius_y: f32,
     sweep_angle: f32,
-    x_rotation: f32
+    x_rotation: f32,
 ) {
     assert!(!p.is_null());
 
     let builder = unsafe { &mut (*p) };
-    let arc = Arc {
-        center: point(center.position[0], center.position[1]),
-        radii: vector(radius_x, radius_y),
-        start_angle: Angle::radians(start_angle),
-        sweep_angle: Angle::radians(sweep_angle),
-        x_rotation: Angle::radians(x_rotation)
-    };
-
-    let mut first = true;
-    arc.for_each_cubic_bezier(&mut |seg: &CubicBezierSegment<f32> | {
-        if first
-        {
-            builder.move_to(seg.from);
-            first = false;
-        }
-
-        builder.cubic_bezier_to(seg.ctrl1, seg.ctrl2, seg.to);
-    })
+    builder.arc(
+        center.into(),
+        vector(radius_x, radius_y),
+        Angle::radians(sweep_angle),
+        Angle::radians(x_rotation),
+    );
 }
 
 #[no_mangle]
 pub extern "C" fn LyonPathBuilder_ArcTo(
-    p: *mut ExposedFlatBuilder,
-    to: InputVertex,
-    radius_x: f32, radius_y: f32,
+    p: *mut InternalBuilder,
+    to: LyonPoint,
+    radius_x: f32,
+    radius_y: f32,
     rotation: f32,
-    large_arc: i32, sweep: i32
+    large_arc: i32,
+    sweep: i32,
 ) {
     assert!(!p.is_null());
 
@@ -98,51 +111,155 @@ pub extern "C" fn LyonPathBuilder_ArcTo(
         large_arc: match large_arc {
             0 => false,
             1 => true,
-            _ => false
+            _ => false,
         },
         sweep: match sweep {
             0 => false,
             1 => true,
-            _ => false
-        }
+            _ => false,
+        },
     };
 
     let builder = unsafe { &mut (*p) };
     builder.arc_to(
-        vector(radius_x, radius_y), 
-        Angle::radians(rotation), 
-        flags, 
-        point(to.position[0], to.position[1])
+        vector(radius_x, radius_y),
+        Angle::radians(rotation),
+        flags,
+        to.into(),
     );
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_CubicBeizerTo(
-    p: *mut ExposedFlatBuilder,
-    cx: f32, cy: f32,
-    c2x: f32, c2y: f32,
-    v: InputVertex
+pub extern "C" fn LyonPathBuilder_HorizontalLineTo(p: *mut InternalBuilder, x: f32) {
+    assert!(!p.is_null());
+    let builder = unsafe { &mut (*p) };
+
+    builder.horizontal_line_to(x);
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_VerticalLineTo(p: *mut InternalBuilder, y: f32) {
+    assert!(!p.is_null());
+    let builder = unsafe { &mut (*p) };
+
+    builder.vertical_line_to(y);
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_RelativeMoveTo(p: *mut InternalBuilder, to: LyonVector) {
+    assert!(!p.is_null());
+    let builder = unsafe { &mut (*p) };
+
+    builder.relative_move_to(to.into());
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_RelativeLineTo(p: *mut InternalBuilder, to: LyonVector) {
+    assert!(!p.is_null());
+    let builder = unsafe { &mut (*p) };
+
+    builder.relative_line_to(to.into());
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_RelativeQuadraticBeizerTo(
+    p: *mut InternalBuilder,
+    ctrl: LyonVector,
+    to: LyonVector,
+) {
+    assert!(!p.is_null());
+    let builder = unsafe { &mut (*p) };
+
+    builder.relative_quadratic_bezier_to(ctrl.into(), to.into());
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_RelativeSmoothQuadraticBeizerTo(
+    p: *mut InternalBuilder,
+    v: LyonVector,
 ) {
     assert!(!p.is_null());
 
     let builder = unsafe { &mut (*p) };
-    builder.cubic_bezier_to(point(cx,cy), point(c2x, c2y), point(v.position[0],v.position[1]));
+    builder.smooth_relative_quadratic_bezier_to(v.into());
 }
 
-
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_End(p: *mut ExposedFlatBuilder, close: bool) {
+pub extern "C" fn LyonPathBuilder_RelativeCubicBeizerTo(
+    p: *mut InternalBuilder,
+    ctrl: LyonVector,
+    ctrl2: LyonVector,
+    to: LyonVector,
+) {
     assert!(!p.is_null());
-
     let builder = unsafe { &mut (*p) };
-    
-    if close {
-        builder.close();
-    }
+
+    builder.relative_cubic_bezier_to(ctrl.into(), ctrl2.into(), to.into());
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_Build(p: *mut ExposedFlatBuilder) -> *mut Path {
+pub extern "C" fn LyonPathBuilder_RelativeSmoothCubicBeizerTo(
+    p: *mut InternalBuilder,
+    c2: LyonVector,
+    v: LyonVector,
+) {
+    assert!(!p.is_null());
+    let builder = unsafe { &mut (*p) };
+
+    builder.smooth_relative_cubic_bezier_to(c2.into(), v.into());
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_RelativeArcTo(
+    p: *mut InternalBuilder,
+    to: LyonVector,
+    r_x: f32,
+    r_y: f32,
+    x_rotation: f32,
+    large_arc: i32,
+    sweep: i32,
+) {
+    assert!(!p.is_null());
+    let builder = unsafe { &mut (*p) };
+
+    let flags = ArcFlags {
+        large_arc: match large_arc {
+            0 => false,
+            1 => true,
+            _ => false,
+        },
+        sweep: match sweep {
+            0 => false,
+            1 => true,
+            _ => false,
+        },
+    };
+
+    builder.relative_arc_to(
+        vector(r_x, r_y),
+        Angle::radians(x_rotation),
+        flags,
+        to.into(),
+    );
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_Reserve(p: *mut InternalBuilder, endpoints: u64, control: u64) {
+    assert!(!p.is_null());
+    let builder = unsafe { &mut (*p) };
+
+    builder.reserve(endpoints as usize, control as usize);
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_Close(p: *mut InternalBuilder) {
+    assert!(!p.is_null());
+    let builder = unsafe { &mut (*p) };
+    builder.close();
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_Build(p: *mut InternalBuilder) -> *mut Path {
     assert!(!p.is_null());
 
     let builder = unsafe { Box::from_raw(p) };
@@ -151,13 +268,43 @@ pub extern "C" fn LyonPathBuilder_Build(p: *mut ExposedFlatBuilder) -> *mut Path
     Box::into_raw(Box::new(path))
 }
 
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_GetCurrentPosition(p: *mut InternalBuilder) -> LyonPoint {
+    assert!(!p.is_null());
+    let builder = unsafe { &mut (*p) };
+
+    let p = builder.current_position();
+    return LyonPoint {
+        x: p.x, 
+        y: p.y
+    };
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_AddRect(p: *mut InternalBuilder, min: LyonPoint, max: LyonPoint) {
+    additional_geometry::add_rectangle(p, min, max)
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_AddCircle(p: *mut InternalBuilder, center: LyonPoint, radius: f32) {
+    additional_geometry::add_circle(p, center, radius);
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_AddEllipse(p: *mut InternalBuilder, center: LyonPoint, r_x: f32, r_y: f32, x_rotation: f32) {
+    additional_geometry::add_ellipse(p, center, r_x, r_y, x_rotation);
+}
+
+#[no_mangle]
+pub extern "C" fn LyonPathBuilder_AddRoundedRect(p: *mut InternalBuilder,  min: LyonPoint, max: LyonPoint, border_radius: f32) {
+    additional_geometry::add_rounded_rectangle(p, min, max, border_radius);
+}
 
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
-pub struct LyonRect
-{
+pub struct LyonRect {
     pub lower_left: [f32; 2],
-    pub upper_right: [f32; 2]
+    pub upper_right: [f32; 2],
 }
 
 #[no_mangle]
@@ -167,7 +314,7 @@ pub extern "C" fn LyonPathBoundingRect(p: *mut Path) -> LyonRect {
 
     LyonRect {
         lower_left: rect.min.to_array(),
-        upper_right: (rect.max).to_array()
+        upper_right: (rect.max).to_array(),
     }
 }
 
@@ -175,4 +322,3 @@ pub extern "C" fn LyonPathBoundingRect(p: *mut Path) -> LyonRect {
 pub extern "C" fn LyonFreePath(p: *mut Path) {
     unsafe { Box::from_raw(p) };
 }
-

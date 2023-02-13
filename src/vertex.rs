@@ -1,7 +1,6 @@
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
-pub struct Vertex
-{
+pub struct Vertex {
     pub position: [f32; 2],
     pub original_position: [f32; 2],
     pub normal: [f32; 2],
