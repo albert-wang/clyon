@@ -8,14 +8,14 @@ use crate::types::{InternalBuilder, LyonPoint, LyonVector};
 
 // Path stuff
 #[no_mangle]
-pub extern "C" fn LyonCreatePathBuilder() -> *mut InternalBuilder {
+pub extern fn LyonCreatePathBuilder() -> *mut InternalBuilder {
     let builder = Path::builder();
     let svg = builder.with_svg();
     Box::into_raw(Box::new(svg))
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_MoveTo(p: *mut InternalBuilder, v: LyonPoint) {
+pub extern fn LyonPathBuilder_MoveTo(p: *mut InternalBuilder, v: LyonPoint) {
     assert!(!p.is_null());
 
     let builder = unsafe { &mut (*p) };
@@ -23,7 +23,7 @@ pub extern "C" fn LyonPathBuilder_MoveTo(p: *mut InternalBuilder, v: LyonPoint) 
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_LineTo(p: *mut InternalBuilder, v: LyonPoint) {
+pub extern fn LyonPathBuilder_LineTo(p: *mut InternalBuilder, v: LyonPoint) {
     assert!(!p.is_null());
 
     let builder = unsafe { &mut (*p) };
@@ -31,7 +31,7 @@ pub extern "C" fn LyonPathBuilder_LineTo(p: *mut InternalBuilder, v: LyonPoint) 
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_QuadraticBeizerTo(
+pub extern fn LyonPathBuilder_QuadraticBeizerTo(
     p: *mut InternalBuilder,
     c: LyonPoint,
     v: LyonPoint,
@@ -43,7 +43,7 @@ pub extern "C" fn LyonPathBuilder_QuadraticBeizerTo(
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_SmoothQuadraticBeizerTo(p: *mut InternalBuilder, v: LyonPoint) {
+pub extern fn LyonPathBuilder_SmoothQuadraticBeizerTo(p: *mut InternalBuilder, v: LyonPoint) {
     assert!(!p.is_null());
 
     let builder = unsafe { &mut (*p) };
@@ -51,7 +51,7 @@ pub extern "C" fn LyonPathBuilder_SmoothQuadraticBeizerTo(p: *mut InternalBuilde
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_CubicBeizerTo(
+pub extern fn LyonPathBuilder_CubicBeizerTo(
     p: *mut InternalBuilder,
     c: LyonPoint,
     c2: LyonPoint,
@@ -64,7 +64,7 @@ pub extern "C" fn LyonPathBuilder_CubicBeizerTo(
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_SmoothCubicBeizerTo(
+pub extern fn LyonPathBuilder_SmoothCubicBeizerTo(
     p: *mut InternalBuilder,
     c2: LyonPoint,
     v: LyonPoint,
@@ -76,7 +76,7 @@ pub extern "C" fn LyonPathBuilder_SmoothCubicBeizerTo(
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_Arc(
+pub extern fn LyonPathBuilder_Arc(
     p: *mut InternalBuilder,
     center: LyonPoint,
     radius_x: f32,
@@ -96,7 +96,7 @@ pub extern "C" fn LyonPathBuilder_Arc(
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_ArcTo(
+pub extern fn LyonPathBuilder_ArcTo(
     p: *mut InternalBuilder,
     to: LyonPoint,
     radius_x: f32,
@@ -130,7 +130,7 @@ pub extern "C" fn LyonPathBuilder_ArcTo(
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_HorizontalLineTo(p: *mut InternalBuilder, x: f32) {
+pub extern fn LyonPathBuilder_HorizontalLineTo(p: *mut InternalBuilder, x: f32) {
     assert!(!p.is_null());
     let builder = unsafe { &mut (*p) };
 
@@ -138,7 +138,7 @@ pub extern "C" fn LyonPathBuilder_HorizontalLineTo(p: *mut InternalBuilder, x: f
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_VerticalLineTo(p: *mut InternalBuilder, y: f32) {
+pub extern fn LyonPathBuilder_VerticalLineTo(p: *mut InternalBuilder, y: f32) {
     assert!(!p.is_null());
     let builder = unsafe { &mut (*p) };
 
@@ -146,7 +146,7 @@ pub extern "C" fn LyonPathBuilder_VerticalLineTo(p: *mut InternalBuilder, y: f32
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_RelativeMoveTo(p: *mut InternalBuilder, to: LyonVector) {
+pub extern fn LyonPathBuilder_RelativeMoveTo(p: *mut InternalBuilder, to: LyonVector) {
     assert!(!p.is_null());
     let builder = unsafe { &mut (*p) };
 
@@ -154,7 +154,7 @@ pub extern "C" fn LyonPathBuilder_RelativeMoveTo(p: *mut InternalBuilder, to: Ly
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_RelativeLineTo(p: *mut InternalBuilder, to: LyonVector) {
+pub extern fn LyonPathBuilder_RelativeLineTo(p: *mut InternalBuilder, to: LyonVector) {
     assert!(!p.is_null());
     let builder = unsafe { &mut (*p) };
 
@@ -162,7 +162,7 @@ pub extern "C" fn LyonPathBuilder_RelativeLineTo(p: *mut InternalBuilder, to: Ly
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_RelativeQuadraticBeizerTo(
+pub extern fn LyonPathBuilder_RelativeQuadraticBeizerTo(
     p: *mut InternalBuilder,
     ctrl: LyonVector,
     to: LyonVector,
@@ -174,7 +174,7 @@ pub extern "C" fn LyonPathBuilder_RelativeQuadraticBeizerTo(
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_RelativeSmoothQuadraticBeizerTo(
+pub extern fn LyonPathBuilder_RelativeSmoothQuadraticBeizerTo(
     p: *mut InternalBuilder,
     v: LyonVector,
 ) {
@@ -185,7 +185,7 @@ pub extern "C" fn LyonPathBuilder_RelativeSmoothQuadraticBeizerTo(
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_RelativeCubicBeizerTo(
+pub extern fn LyonPathBuilder_RelativeCubicBeizerTo(
     p: *mut InternalBuilder,
     ctrl: LyonVector,
     ctrl2: LyonVector,
@@ -198,7 +198,7 @@ pub extern "C" fn LyonPathBuilder_RelativeCubicBeizerTo(
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_RelativeSmoothCubicBeizerTo(
+pub extern fn LyonPathBuilder_RelativeSmoothCubicBeizerTo(
     p: *mut InternalBuilder,
     c2: LyonVector,
     v: LyonVector,
@@ -210,7 +210,7 @@ pub extern "C" fn LyonPathBuilder_RelativeSmoothCubicBeizerTo(
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_RelativeArcTo(
+pub extern fn LyonPathBuilder_RelativeArcTo(
     p: *mut InternalBuilder,
     to: LyonVector,
     r_x: f32,
@@ -244,7 +244,7 @@ pub extern "C" fn LyonPathBuilder_RelativeArcTo(
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_Reserve(p: *mut InternalBuilder, endpoints: u64, control: u64) {
+pub extern fn LyonPathBuilder_Reserve(p: *mut InternalBuilder, endpoints: u64, control: u64) {
     assert!(!p.is_null());
     let builder = unsafe { &mut (*p) };
 
@@ -252,14 +252,14 @@ pub extern "C" fn LyonPathBuilder_Reserve(p: *mut InternalBuilder, endpoints: u6
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_Close(p: *mut InternalBuilder) {
+pub extern fn LyonPathBuilder_Close(p: *mut InternalBuilder) {
     assert!(!p.is_null());
     let builder = unsafe { &mut (*p) };
     builder.close();
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_Build(p: *mut InternalBuilder) -> *mut Path {
+pub extern fn LyonPathBuilder_Build(p: *mut InternalBuilder) -> *mut Path {
     assert!(!p.is_null());
 
     let builder = unsafe { Box::from_raw(p) };
@@ -269,7 +269,7 @@ pub extern "C" fn LyonPathBuilder_Build(p: *mut InternalBuilder) -> *mut Path {
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_GetCurrentPosition(p: *mut InternalBuilder) -> LyonPoint {
+pub extern fn LyonPathBuilder_GetCurrentPosition(p: *mut InternalBuilder) -> LyonPoint {
     assert!(!p.is_null());
     let builder = unsafe { &mut (*p) };
 
@@ -278,12 +278,12 @@ pub extern "C" fn LyonPathBuilder_GetCurrentPosition(p: *mut InternalBuilder) ->
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_AddRect(p: *mut InternalBuilder, min: LyonPoint, max: LyonPoint) {
+pub extern fn LyonPathBuilder_AddRect(p: *mut InternalBuilder, min: LyonPoint, max: LyonPoint) {
     additional_geometry::add_rectangle(p, min, max)
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_AddCircle(
+pub extern fn LyonPathBuilder_AddCircle(
     p: *mut InternalBuilder,
     center: LyonPoint,
     radius: f32,
@@ -292,7 +292,7 @@ pub extern "C" fn LyonPathBuilder_AddCircle(
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_AddEllipse(
+pub extern fn LyonPathBuilder_AddEllipse(
     p: *mut InternalBuilder,
     center: LyonPoint,
     r_x: f32,
@@ -303,7 +303,7 @@ pub extern "C" fn LyonPathBuilder_AddEllipse(
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBuilder_AddRoundedRect(
+pub extern fn LyonPathBuilder_AddRoundedRect(
     p: *mut InternalBuilder,
     min: LyonPoint,
     max: LyonPoint,
@@ -320,7 +320,7 @@ pub struct LyonRect {
 }
 
 #[no_mangle]
-pub extern "C" fn LyonPathBoundingRect(p: *mut Path) -> LyonRect {
+pub extern fn LyonPathBoundingRect(p: *mut Path) -> LyonRect {
     let path = unsafe { &mut (*p) };
     let rect = lyon::algorithms::aabb::bounding_box(path.iter());
 
@@ -331,6 +331,6 @@ pub extern "C" fn LyonPathBoundingRect(p: *mut Path) -> LyonRect {
 }
 
 #[no_mangle]
-pub extern "C" fn LyonFreePath(p: *mut Path) {
+pub extern fn LyonFreePath(p: *mut Path) {
     unsafe { Box::from_raw(p) };
 }
