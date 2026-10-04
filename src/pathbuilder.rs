@@ -269,6 +269,13 @@ pub extern fn LyonPathBuilder_Build(p: *mut InternalBuilder) -> *mut Path {
 }
 
 #[no_mangle]
+pub extern fn LyonFreePathBuilder(p: *mut InternalBuilder) {
+    if !p.is_null() {
+        drop(unsafe { Box::from_raw(p) });
+    }
+}
+
+#[no_mangle]
 pub extern fn LyonPathBuilder_GetCurrentPosition(p: *mut InternalBuilder) -> LyonPoint {
     assert!(!p.is_null());
     let builder = unsafe { &mut (*p) };
@@ -321,7 +328,8 @@ pub struct LyonRect {
 
 #[no_mangle]
 pub extern fn LyonPathBoundingRect(p: *mut Path) -> LyonRect {
-    let path = unsafe { &mut (*p) };
+    assert!(!p.is_null());
+    let path = unsafe { &*p };
     let rect = lyon::algorithms::aabb::bounding_box(path.iter());
 
     LyonRect {
@@ -332,5 +340,7 @@ pub extern fn LyonPathBoundingRect(p: *mut Path) -> LyonRect {
 
 #[no_mangle]
 pub extern fn LyonFreePath(p: *mut Path) {
-    unsafe { Box::from_raw(p) };
+    if !p.is_null() {
+        drop(unsafe { Box::from_raw(p) });
+    }
 }

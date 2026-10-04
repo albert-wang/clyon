@@ -5,25 +5,41 @@ mod tessellate;
 mod types;
 mod vertex;
 
+// Matches LyonInformationType in clyon.h.
+const INFO_BUILD_TIME: u32 = 0;
+
+// clyon's own version, packed as (major << 24) | (minor << 16) | patch.
 #[no_mangle]
 pub extern fn LyonVersion() -> u32 {
-    return (1 << 24) | (0 << 16) | (1);
+    let part = |s: &str| s.parse::<u32>().unwrap_or(0);
+
+    (part(env!("CARGO_PKG_VERSION_MAJOR")) << 24)
+        | (part(env!("CARGO_PKG_VERSION_MINOR")) << 16)
+        | part(env!("CARGO_PKG_VERSION_PATCH"))
 }
 
 #[no_mangle]
-pub extern fn LyonInfo(info: u32, _: *mut *const i8) {
-    match info {
-        _ => {
-            return;
-        }
-    }
-}
-
-#[no_mangle]
-pub extern fn LyonFreeString(input_err: *mut i8) {
-    if input_err.is_null() {
+pub extern fn LyonInfo(info: u32, output: *mut *mut i8) {
+    if output.is_null() {
         return;
     }
 
-    unsafe { std::ffi::CString::from_raw(input_err) };
+    let value = match info {
+        INFO_BUILD_TIME => Some(env!("CLYON_BUILD_TIME")),
+        _ => None,
+    };
+
+    unsafe {
+        *output = match value {
+            Some(v) => std::ffi::CString::new(v).unwrap_or_default().into_raw(),
+            None => std::ptr::null_mut(),
+        };
+    }
+}
+
+#[no_mangle]
+pub extern fn LyonFreeString(input: *mut i8) {
+    if !input.is_null() {
+        drop(unsafe { std::ffi::CString::from_raw(input) });
+    }
 }

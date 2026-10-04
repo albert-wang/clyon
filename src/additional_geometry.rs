@@ -60,6 +60,7 @@ pub fn add_circle(p: *mut InternalBuilder, c: LyonPoint, radius: f32) {
     let dir = 1.0;
     let center: Point = c.into();
 
+    assert!(!p.is_null());
     let builder = unsafe { &mut (*p) };
 
     // https://spencermortensen.com/articles/bezier-circle/
@@ -176,7 +177,7 @@ pub fn add_rounded_rectangle(
         builder.cubic_bezier_to(points[1], points[2], points[3]);
     }
     builder.line_to(points[4]);
-    if tl > 0.0 {
+    if tr > 0.0 {
         builder.cubic_bezier_to(points[5], points[6], points[7]);
     }
     builder.line_to(points[8]);

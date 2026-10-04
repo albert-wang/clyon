@@ -1,6 +1,6 @@
 [package]
 name = "clyon"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Albert <albertywang@gmail.com>"]
 edition = "2021"
 
@@ -10,4 +10,11 @@ name = "clyon"
 crate_type = ["staticlib"]
 
 [dependencies]
-lyon = "1.0.1"
+lyon = "1.0.19"
+
+# A panic can't unwind into the C++ caller, so abort the process instead.
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

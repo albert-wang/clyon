@@ -31,7 +31,7 @@ extern "C"
 	struct LyonOutputVertex
 	{
 		float position[2];
-		float uv[2];
+		float originalPosition[2];
 		float normal[2];
 		uint32_t color;
 
@@ -54,8 +54,8 @@ extern "C"
 
 	enum LyonOrientation
 	{
-		LyonOrientationHorizontal = 0,
-		LyonOrientationVertical = 1
+		LyonOrientationVertical = 0,
+		LyonOrientationHorizontal = 1
 	};
 
 	enum LyonLineCap
@@ -174,7 +174,7 @@ extern "C"
 	void				LyonPathBuilder_RelativeSmoothQuadraticBeizerTo	(LyonPathBuilder*, LyonVector ending);
 	void				LyonPathBuilder_RelativeCubicBeizerTo       	(LyonPathBuilder*, LyonVector ctrl, LyonVector ctrl2, LyonVector end);
 	void				LyonPathBuilder_RelativeSmoothCubicBeizerTo 	(LyonPathBuilder*, LyonVector ctrl2, LyonVector end);
-	void				LyonPathBuilder_RelativeArcTo		(LyonPathBuilder*, LyonPoint to, float rX, float rY, float xRotation, int32_t large, int32_t sweep);
+	void				LyonPathBuilder_RelativeArcTo		(LyonPathBuilder*, LyonVector to, float rX, float rY, float xRotation, int32_t large, int32_t sweep);
 
 	void				LyonPathBuilder_Reserve				(LyonPathBuilder*, uint64_t Endpoints, uint64_t ControlPoints);
 
@@ -188,16 +188,22 @@ extern "C"
 
 	// This function 'consumes' the PathBuilder, and frees it.
 	// Any additional access to the LyonPathBuilder after this function is invalid.
-	// Returns an error in the out paramter. The resulting string must be free'd by calling LyonFreeError
-	LyonPath*			LyonPathBuilder_Build				(LyonPathBuilder*, char * const * error);
+	LyonPath*			LyonPathBuilder_Build				(LyonPathBuilder*);
+
+	// Frees a builder without building a path from it.
+	void				LyonFreePathBuilder					(LyonPathBuilder*);
 
 	// LyonPath functions
 	LyonAABB			LyonPathBoundingRect	(LyonPath*);
 	void				LyonFreePath			(LyonPath*);
-	LyonGeometry16*		LyonTessellateFill16	(LyonPath*, LyonFillProperties, char * const * error);
-	LyonGeometry16*		LyonTessellateStroke16	(LyonPath*, LyonStrokeProperties, char * const * error);
-	LyonGeometry32*		LyonTessellateFill32	(LyonPath*, LyonFillProperties, char * const * error);
-	LyonGeometry32*		LyonTessellateStroke32	(LyonPath*, LyonStrokeProperties, char * const * error);
+
+	// These return null on failure. The error, if any, is written to the out parameter and must
+	// be free'd with LyonFreeString. Running out of indices in the 16-bit variants returns null
+	// without an error.
+	LyonGeometry16*		LyonTessellateFill16	(LyonPath*, LyonFillProperties, char** error);
+	LyonGeometry16*		LyonTessellateStroke16	(LyonPath*, LyonStrokeProperties, char** error);
+	LyonGeometry32*		LyonTessellateFill32	(LyonPath*, LyonFillProperties, char** error);
+	LyonGeometry32*		LyonTessellateStroke32	(LyonPath*, LyonStrokeProperties, char** error);
 
 	const LyonOutputVertex* LyonGeometry16_VerticesData		(LyonGeometry16*);
 	const uint16_t*			LyonGeometry16_IndicesData		(LyonGeometry16*);
@@ -206,11 +212,12 @@ extern "C"
 	void					LyonFreeGeometry16				(LyonGeometry16*);
 
 	const LyonOutputVertex* LyonGeometry32_VerticesData		(LyonGeometry32*);
-	const uint16_t*			LyonGeometry32_IndicesData		(LyonGeometry32*);
+	const uint32_t*			LyonGeometry32_IndicesData		(LyonGeometry32*);
 	uint32_t				LyonGeometry32_VerticesLength	(LyonGeometry32*);
 	uint32_t				LyonGeometry32_IndicesLength	(LyonGeometry32*);
 	void					LyonFreeGeometry32				(LyonGeometry32*);
 
+	// clyon's version, packed as (major << 24) | (minor << 16) | patch.
 	uint32_t				LyonVersion();
 	void					LyonFreeString(const char*);
 
@@ -219,6 +226,8 @@ extern "C"
 	{
 		LYON_INFO_BUILD_TIME = 0
 	};
-	void                    LyonInfo(uint32_t type, char * const *);
+
+	// Writes the requested string (null for an unknown type), which must be free'd with LyonFreeString.
+	void                    LyonInfo(uint32_t type, char** output);
 }
 #endif

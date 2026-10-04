@@ -29,12 +29,42 @@ pub struct CStrokeOptions {
     pub tolerance: f32,
 }
 
+fn clear_error(output_err: *mut *mut i8) {
+    if !output_err.is_null() {
+        unsafe { *output_err = std::ptr::null_mut() };
+    }
+}
+
+// Running out of 16-bit indices returns null without a message; the caller is expected
+// to treat that as fatal. Other errors are written to output_err.
+fn into_output<IndexType>(
+    result: Result<(), TessellationError>,
+    geometry: VertexBuffers<Vertex, IndexType>,
+    output_err: *mut *mut i8,
+) -> *mut VertexBuffers<Vertex, IndexType> {
+    match result {
+        Ok(_) => Box::into_raw(Box::new(geometry)),
+        Err(TessellationError::GeometryBuilder(GeometryBuilderError::TooManyVertices)) => {
+            std::ptr::null_mut()
+        }
+        Err(err) => {
+            if !output_err.is_null() {
+                let err_str = std::ffi::CString::new(err.to_string()).unwrap_or_default();
+                unsafe { *output_err = err_str.into_raw() };
+            }
+
+            std::ptr::null_mut()
+        }
+    }
+}
+
 fn tesselate_fill<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex>(
     p: *mut Path,
     copts: CFillOptions,
-    output_err: *mut *const i8
+    output_err: *mut *mut i8,
 ) -> *mut VertexBuffers<Vertex, IndexType> {
     assert!(!p.is_null());
+    clear_error(output_err);
 
     let path = unsafe { &*p };
     let mut tesselator = FillTessellator::new();
@@ -72,46 +102,24 @@ fn tesselate_fill<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex>(
             }),
         );
 
-    match result {
-        Ok(_) => {
-            // Happy path, returns the pointer to the generated geometry.
-            return Box::into_raw(Box::new(geometry));
-        }, 
-        Err(TessellationError::GeometryBuilder(err)) => {            
-            if err == GeometryBuilderError::TooManyVertices {
-                // Too many vertices. This should be caught and handled somewhere else.
-                return std::ptr::null_mut();
-            } else {
-                let err_str = std::ffi::CString::new(err.to_string()).unwrap();
-                unsafe { *output_err  = err_str.into_raw() };
-
-                return std::ptr::null_mut();
-            }
-        }, 
-        Err(other) => {
-            let err_str = std::ffi::CString::new(other.to_string()).unwrap();
-            unsafe { *output_err  = err_str.into_raw() };
-
-            return std::ptr::null_mut();
-        }
-    };
+    into_output(result, geometry, output_err)
 }
 
+// Values match LyonLineCap in clyon.h.
 fn cap_from_integer(i: i32) -> LineCap {
     match i {
-        0 => LineCap::Butt,
-        1 => LineCap::Round,
-        2 => LineCap::Square,
+        1 => LineCap::Square,
+        2 => LineCap::Round,
         _ => LineCap::Butt,
     }
 }
 
+// Values match LyonLineJoin in clyon.h.
 fn join_from_integer(i: i32) -> LineJoin {
     match i {
-        0 => LineJoin::Miter,
         1 => LineJoin::MiterClip,
-        2 => LineJoin::Bevel,
-        3 => LineJoin::Round,
+        2 => LineJoin::Round,
+        3 => LineJoin::Bevel,
         _ => LineJoin::Miter,
     }
 }
@@ -119,17 +127,10 @@ fn join_from_integer(i: i32) -> LineJoin {
 fn tesselate_stroke<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex>(
     p: *mut Path,
     copts: CStrokeOptions,
-    output_err: *mut *const i8
+    output_err: *mut *mut i8,
 ) -> *mut VertexBuffers<Vertex, IndexType> {
-    if p.is_null() {
-        panic!("Null pointer path passed into TessellateStroke")
-    }
-
-    if output_err.is_null() {
-        panic!("Null pointer err passed into TesselateStroke")
-    }
-
-    unsafe { *output_err = std::ptr::null_mut() };
+    assert!(!p.is_null());
+    clear_error(output_err);
 
     let path = unsafe { &*p };
     let mut tesselator = StrokeTessellator::new();
@@ -139,7 +140,9 @@ fn tesselate_stroke<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex
     opts.end_cap = cap_from_integer(copts.end_cap);
     opts.line_join = join_from_integer(copts.join);
     opts.line_width = copts.width;
-    opts.tolerance = copts.tolerance;
+    if copts.tolerance > 0.0 {
+        opts.tolerance = copts.tolerance
+    }
 
     let mut geometry: VertexBuffers<Vertex, IndexType> = VertexBuffers::new();
     let result = tesselator
@@ -162,36 +165,14 @@ fn tesselate_stroke<IndexType: Add + From<VertexId> + geometry_builder::MaxIndex
             }),
         );
 
-    match result {
-        Ok(_) => {
-            // Happy path, returns the pointer to the generated geometry.
-            return Box::into_raw(Box::new(geometry));
-        }, 
-        Err(TessellationError::GeometryBuilder(err)) => {            
-            if err == GeometryBuilderError::TooManyVertices {
-                // Too many vertices. This should be caught and handled somewhere else.
-                return std::ptr::null_mut();
-            } else {
-                let err_str = std::ffi::CString::new(err.to_string()).unwrap();
-                unsafe { *output_err  = err_str.into_raw() };
-
-                return std::ptr::null_mut();
-            }
-        }, 
-        Err(other) => {
-            let err_str = std::ffi::CString::new(other.to_string()).unwrap();
-            unsafe { *output_err  = err_str.into_raw() };
-
-            return std::ptr::null_mut();
-        }
-    };
+    into_output(result, geometry, output_err)
 }
 
 #[no_mangle]
 pub extern fn LyonTessellateFill16(
     p: *mut Path,
     copts: CFillOptions,
-    output_err: *mut *const i8
+    output_err: *mut *mut i8
 ) -> *mut VertexBuffers<Vertex, u16> {
     tesselate_fill(p, copts, output_err)
 }
@@ -200,7 +181,7 @@ pub extern fn LyonTessellateFill16(
 pub extern fn LyonTessellateFill32(
     p: *mut Path,
     copts: CFillOptions,
-    output_err: *mut *const i8
+    output_err: *mut *mut i8
 ) -> *mut VertexBuffers<Vertex, u32> {
     tesselate_fill(p, copts, output_err)
 }
@@ -209,7 +190,7 @@ pub extern fn LyonTessellateFill32(
 pub extern fn LyonTessellateStroke16(
     p: *mut Path,
     copts: CStrokeOptions,
-    output_err: *mut *const i8
+    output_err: *mut *mut i8
 ) -> *mut VertexBuffers<Vertex, u16> {
     tesselate_stroke(p, copts, output_err)
 }
@@ -218,17 +199,21 @@ pub extern fn LyonTessellateStroke16(
 pub extern fn LyonTessellateStroke32(
     p: *mut Path,
     copts: CStrokeOptions,
-    output_err: *mut *const i8
+    output_err: *mut *mut i8
 ) -> *mut VertexBuffers<Vertex, u32> {
     tesselate_stroke(p, copts, output_err)
 }
 
 #[no_mangle]
 pub extern fn LyonFreeGeometry16(p: *mut VertexBuffers<Vertex, u16>) {
-    unsafe { Box::from_raw(p) };
+    if !p.is_null() {
+        drop(unsafe { Box::from_raw(p) });
+    }
 }
 
 #[no_mangle]
 pub extern fn LyonFreeGeometry32(p: *mut VertexBuffers<Vertex, u32>) {
-    unsafe { Box::from_raw(p) };
+    if !p.is_null() {
+        drop(unsafe { Box::from_raw(p) });
+    }
 }

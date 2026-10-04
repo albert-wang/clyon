@@ -1,2 +1,2 @@
 cargo build --release
-Copy-Item ./target/debug/clyon.lib ../../Build/clyon.lib
+Copy-Item ./target/release/clyon.lib ../../Build/clyon.lib
